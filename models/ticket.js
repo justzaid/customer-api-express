@@ -3,13 +3,13 @@ const { v4: uuidv4 } = require('uuid');
 
 const reviewSchema = new mongoose.Schema(
     {
-      text: {
-        type: String,
-        required: true
-      },
       author: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+      },
+      description: {
+        type: String,
+        required: true
       }
     },
     { timestamps: true }
@@ -39,31 +39,42 @@ const ticketSchema = new mongoose.Schema(
       category: {
         type: String,
         required: true,
-        enum: ['Tickets', 'Customer Service', 'Airplane Seats', 'Catering', 'Baggage', 'Flight experience', 'Technical Issue',],
+        enum: [
+          'Delayed Flight',
+          'Canceled Flight',
+          'Missed Connection',
+          'Lost Baggage',
+          'Damaged Baggage',
+          'Delayed Baggage',
+          'Incorrect Booking Details',
+          'Refund & Compensation',
+          'Seat Assignment Issue',
+          'Uncomfortable Seats',
+          'Food & Catering Issue',
+          'Restroom & Cleanliness',
+          'Rude Staff',
+          'Customer Service Complaint',
+          'Online Check-in Problem',
+          'App or Website Issue',
+          'Disability Assistance',
+          'Infant & Child Services',
+          'Other',
+        ],
       },
       status: {
         type: String,
         enum: ['Open', 'In progress', 'Resolved', 'Closed',],
         default: 'Open',
       },
-      createdAt: {
-        type: Date,
-        default: Date.now
-      },
-      resolvedAt: {
-        type: Date,
-        default: null
-      },
       assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'admin',
+        ref: 'User',
         default: null
       },
-      author: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+      reviews: {
+        type: [reviewSchema],
+        default: [],
       },
-      reviews: [reviewSchema],
     },
     { timestamps: true }
   );
