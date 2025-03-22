@@ -10,29 +10,31 @@ const router = express.Router();
 
 router.post('/signup', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, email, password, role } = req.body;
 
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ $or: [{ username }, { email }]});
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Something went wrongm, try again.' });
+      return res.status(400).json({ error: 'Username or email already exists. Try again' });
     }
 
     const hashedPassword = bcrypt.hashSync(password, parseInt(process.env.SALT_ROUNDS));
 
-    const user = await User.create({ username, hashedPassword });
+    const user = await User.create({ username, email, hashedPassword, role: role || 'user' });
 
     const token = jwt.sign(
       {
         _id: user._id,
         username: user.username,
+        email: user.email,
+        role: user.role,
       },
       process.env.JWT_SECRET
     );
 
     return res.status(201).json({ user, token });
   } catch (error) {
-    res.status(400).json({ error: 'Something wen wrong, try again.' });
+    res.status(400).json({ error: 'Could not return user information or generate a token' });
   }
 });
 
