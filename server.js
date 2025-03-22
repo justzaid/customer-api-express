@@ -1,27 +1,28 @@
-import { config } from 'dotenv';
-import morgan from 'morgan';
-import cors from 'cors';
+// Dependancies
+const dotenv = require('dotenv');
+const morgan = require('morgan');
+const cors = require('cors');
 
-config();
+dotenv.config();
 
-import './config/database';
-import express, { json } from 'express';
+require('./config/database');
+const express = require('express');
 
 // Authentication
-import verifyToken from './middleware/verify-token';
+const verifyToken = require('./middleware/verify-token');
 
 // Controllers
-import testJWTRouter from './controllers/test-jwt';
-import usersRouter from './controllers/users';
-import profilesRouter from './controllers/profiles';
-import ticketsRouter from './controllers/tickets.js';
+const testJWTRouter = require('./controllers/test-jwt');
+const usersRouter = require('./controllers/users');
+const profilesRouter = require('./controllers/profiles');
+const ticketsRouter = require('./controllers/tickets.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(morgan('dev'));
-app.use(json());
+app.use(express.json());
 
 // Routes
 app.use('/test-jwt', testJWTRouter);
