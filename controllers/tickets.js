@@ -106,8 +106,8 @@ router.delete('/:ticketId/reviews/:reviewId', async (req, res) => {
     ticket.reviews.remove({ _id: req.params.reviewId });
     await ticket.save();
     res.status(200).json({ message: 'Review has been succesfully removed.' });
-  } catch (err) {
-    res.status(500).json(err);
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
@@ -118,8 +118,8 @@ router.put('/:ticketId/reviews/:reviewId', async (req, res) => {
     review.text = req.body.text;
     await ticket.save();
     res.status(200).json({ message: 'Review has been succesfully updated.' });
-  } catch (err) {
-    res.status(500).json(err);
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
