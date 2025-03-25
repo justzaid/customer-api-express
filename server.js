@@ -28,13 +28,9 @@ app.use(express.json());
 app.use('/test-jwt', testJWTRouter);
 app.use('/users', usersRouter);
 
-
-// Tickets
-app.use('/tickets', ticketsRouter);
-
-
 // Protected Routes
 app.use(verifyToken)
+app.use('/tickets', ticketsRouter);
 app.use('/profiles', profilesRouter);
 
 app.listen(PORT, () => {

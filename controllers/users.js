@@ -40,9 +40,10 @@ router.post('/signup', async (req, res) => {
 
 router.post('/signin', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ email }, { username: 1, hashedPassword: 1, role: 1 });
+
 
     if (!existingUser) {
       return res.status(400).json({ error: 'Invalid Credentials' });
@@ -51,13 +52,14 @@ router.post('/signin', async (req, res) => {
     const isValidPassword = bcrypt.compareSync(password, existingUser.hashedPassword);
 
     if (!isValidPassword) {
-      throw Error('Invalid Credentials');
+      return res.status(400).json({ error: 'Invalid Credentials' });
     }
 
     const token = jwt.sign(
       {
         _id: existingUser._id,
         username: existingUser.username,
+        email: existingUser.email,
       },
       process.env.JWT_SECRET
     );
