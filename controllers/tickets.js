@@ -38,7 +38,7 @@ router.get('/my-tickets/:ticketId', async (req, res) => {
     const ticket = await Ticket.findById(req.params.ticketId).populate('customerId').populate('reviews.author');
 
     // Check if the ticket belongs to the logged-in user or if the user is an admin
-    if (ticket.customerId.toString() !== userId.toString() && req.user.role !== 'admin') {
+    if (ticket.customerId._id.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: "You are not authorized to view this ticket" });
     }
 

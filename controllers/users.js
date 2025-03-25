@@ -60,6 +60,7 @@ router.post('/signin', async (req, res) => {
         _id: existingUser._id,
         username: existingUser.username,
         email: existingUser.email,
+        role: existingUser.role,
       },
       process.env.JWT_SECRET
     );
