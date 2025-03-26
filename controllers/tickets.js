@@ -1,4 +1,5 @@
 const express = require('express');
+const { v4: uuidv4 } = require('uuid'); // Import uuid generator
 const verifyToken = require('../middleware/verify-token.js');
 const Ticket = require('../models/ticket.js');
 const router = express.Router();
@@ -56,10 +57,14 @@ router.get('/my-tickets/:ticketId', async (req, res) => {
 // Post a new ticket
 router.post('/', async (req, res) => {
     try {
-      req.body.author = req.user._id;
-      const ticket = await Ticket.create(req.body);
-      ticket._doc.customerId = req.user;
-      res.status(201).json(ticket);
+      // Assign the logged-in user's ID to the customerId field
+      req.body.customerId = req.user._id;
+      // Generate a unique ticketId using uuid
+      req.body.ticketId = uuidv4(); 
+      const { subject, description, category, customerId, ticketId } = req.body; 
+      const ticket = await Ticket.create({ subject, description, category, customerId, ticketId });
+      const populatedTicket = await Ticket.findById(ticket._id).populate('customerId', 'username email');
+      res.status(201).json(populatedTicket);
     } catch (error) {
       console.log(error);
       res.status(500).json(error);
@@ -102,8 +107,14 @@ try {
 router.delete('/:ticketId', async (req, res) => {
     try {
       const ticket = await Ticket.findById(req.params.ticketId);
+
+      // Check if ticket exists
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket not found' });
+      }
   
-      if (!ticket.author.equals(req.user._id)) {
+      // Check permissions: User must be the customer who created the ticket OR an admin
+      if (!ticket.customerId.equals(req.user._id) && req.user.role !== 'admin') {
         return res.status(403).send("You're not allowed to do that!");
       }
   
