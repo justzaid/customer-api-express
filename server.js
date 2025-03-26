@@ -28,8 +28,7 @@ app.use(express.json());
 app.use('/test-jwt', testJWTRouter);
 app.use('/users', usersRouter);
 
-// Protected Routes
-app.use(verifyToken)
+// Protected Routes - verifyToken is applied within each router as needed
 app.use('/tickets', ticketsRouter);
 app.use('/profiles', profilesRouter);
 

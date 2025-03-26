@@ -1,8 +1,18 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid'); // Import uuid generator
+const { v4: uuidv4 } = require('uuid');
 const verifyToken = require('../middleware/verify-token.js');
 const Ticket = require('../models/ticket.js');
+const User = require('../models/user.js');
 const router = express.Router();
+
+// Middleware to check for admin role
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Forbidden: Requires admin privileges' });
+  }
+};
 
 // ========= Protected Routes =========
 
@@ -30,6 +40,32 @@ router.get('/my-tickets', async (req, res) => {
   }
 });
 
+router.get('/all', isAdmin, async (req, res) => {
+  try {
+    const tickets = await Ticket.find({})
+      .populate({
+        path: 'customerId',
+        select: 'username email _id',
+      })
+      .populate({
+        path: 'assignedTo',
+        select: 'username email _id',
+      })
+      .sort({ createdAt: 'desc' });
+
+    const transformedTickets = tickets.map(ticket => {
+      const ticketObject = ticket.toObject(); // Convert Mongoose doc to plain object
+      ticketObject.user = ticketObject.customerId; // Alias customerId as user
+      delete ticketObject.customerId; // Remove original customerId field
+      return ticketObject;
+    });
+
+    res.status(200).json(transformedTickets);
+  } catch (error) {
+    console.error('Error fetching all tickets:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
 
 
 // Get a specific ticket by ID for logged-in user while admin sees all

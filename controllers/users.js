@@ -2,11 +2,22 @@ const express = require('express');
 // auth
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const verifyToken = require('../middleware/verify-token');
 
 // Models
 const User = require('../models/user');
 
 const router = express.Router();
+
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const users = await User.find({}, { hashedPassword: 0 });
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
 
 router.post('/signup', async (req, res) => {
   try {
