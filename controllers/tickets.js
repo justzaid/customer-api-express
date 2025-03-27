@@ -273,7 +273,7 @@ router.get('/stats', isAdmin, async (req, res) => {
     const stats = await Ticket.aggregate([
       {
         $group: {
-          _id: { $dateToString: { format: groupFormat, date: '$createdAt', timezone: 'UTC' } }, // Added timezone
+          _id: { $dateToString: { format: groupFormat, date: '$createdAt', timezone: 'UTC' } },
           count: { $sum: 1 },
         },
       },
