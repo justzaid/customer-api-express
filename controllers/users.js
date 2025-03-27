@@ -1,10 +1,10 @@
 const express = require('express');
-// auth
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middleware/verify-token');
 
-// Models
+
 const User = require('../models/user');
 
 const router = express.Router();
@@ -14,7 +14,6 @@ router.get('/', verifyToken, async (req, res) => {
     const users = await User.find({}, { hashedPassword: 0 });
     res.status(200).json(users);
   } catch (error) {
-    console.error("Error fetching users:", error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
@@ -53,7 +52,6 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // had to add email to get access in displaying email in front end app
     const existingUser = await User.findOne({ email }, { username: 1, email: 1, hashedPassword: 1, role: 1 });
 
 

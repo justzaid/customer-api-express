@@ -21,7 +21,6 @@ const ticketSchema = new mongoose.Schema(
         ref: 'User',
         required: true,
       },
-      // Add ticketId field to match the database index
       ticketId: { 
         type: String,
         required: true, 

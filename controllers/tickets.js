@@ -5,7 +5,6 @@ const Ticket = require('../models/ticket.js');
 const User = require('../models/user.js');
 const router = express.Router();
 
-// Middleware to check for admin role
 const isAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -14,20 +13,14 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// ========= Protected Routes =========
-
 router.use(verifyToken);
 
-
-
-// Get all tickets for logged-in user, while admin sees all
 router.get('/my-tickets', async (req, res) => {
   try {
     const userId = req.user._id;
     let tickets;
 
     if (req.user.role === 'admin') {
-      // Admin can view all tickets
       tickets = await Ticket.find({}).populate('customerId').sort({ createdAt: 'desc' });
     } else {
       tickets = await Ticket.find({ customerId: userId })
@@ -64,13 +57,10 @@ router.get('/all', isAdmin, async (req, res) => {
 
     res.status(200).json(transformedTickets);
   } catch (error) {
-    console.error('Error fetching all tickets:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-
-// Get a specific ticket by ID for logged-in user while admin sees all
 router.get('/my-tickets/:ticketId', async (req, res) => {
   try {
     const userId = req.user._id;
@@ -79,18 +69,13 @@ router.get('/my-tickets/:ticketId', async (req, res) => {
       .populate('customerId', 'username email _id')
       .populate('reviews.author', 'username email _id')
       .populate('assignedTo', 'username email _id');
-
-    // Check if ticket exists
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-
-    // Check if the ticket belongs to the logged-in user or if the user is an admin
     if (ticket.customerId._id.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: "You are not authorized to view this ticket" });
     }
 
-    // Sort reviews by createdAt
     if (ticket.reviews) {
       ticket.reviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }
@@ -106,38 +91,26 @@ router.get('/my-tickets/:ticketId', async (req, res) => {
 
     res.status(200).json(ticketObject);
   } catch (error) {
-    console.error('Error fetching ticket by ID:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-
-
-// Post a new ticket
 router.post('/', async (req, res) => {
     try {
-      // Assign the logged-in user's ID to the customerId field
       req.body.customerId = req.user._id;
-      // Generate a unique ticketId using uuid
       req.body.ticketId = uuidv4(); 
       const { subject, description, category, customerId, ticketId } = req.body; 
       const ticket = await Ticket.create({ subject, description, category, customerId, ticketId });
       const populatedTicket = await Ticket.findById(ticket._id).populate('customerId', 'username email');
       res.status(201).json(populatedTicket);
     } catch (error) {
-      console.log(error);
       res.status(500).json(error);
     }
 });
 
-
-
-// Update a ticket
 router.put('/:ticketId', async (req, res) => {
 try {
     const ticket = await Ticket.findById(req.params.ticketId);
-
-    // Checking if ticket exists
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
@@ -160,28 +133,19 @@ try {
     if (updatedTicket.reviews) {
       updatedTicket.reviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }
-
-    // Issue JSON response:
     res.status(200).json(updatedTicket);
 } catch (error) {
-    console.error('Error updating ticket:', error);
     res.status(500).json(error);
 }
 });
 
 
-
-// Delete a Ticket
 router.delete('/:ticketId', async (req, res) => {
     try {
       const ticket = await Ticket.findById(req.params.ticketId);
-
-      // Check if ticket exists
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
       }
-  
-      // Check permissions: User must be the customer who created the ticket OR an admin
       if (!ticket.customerId.equals(req.user._id) && req.user.role !== 'admin') {
         return res.status(403).send("You're not allowed to do that!");
       }
@@ -194,21 +158,17 @@ router.delete('/:ticketId', async (req, res) => {
 });
 
 
-
-// Post a ticket review
 router.post('/:ticketId/reviews', async (req, res) => {
     try {
       req.body.author = req.user._id;
       const ticket = await Ticket.findById(req.params.ticketId);
       ticket.reviews.push(req.body);
       await ticket.save();
-  
-      // Find the newly created reviews:
+
       const newReview = ticket.reviews[ticket.reviews.length - 1];
   
       newReview._doc.author = req.user;
   
-      // Respond with the newReview:
       res.status(201).json(newReview);
     } catch (error) {
       res.status(500).json(error);
@@ -216,8 +176,6 @@ router.post('/:ticketId/reviews', async (req, res) => {
 });
 
 
-
-// Delete a review from a ticket
 router.delete('/:ticketId/reviews/:reviewId', async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.ticketId);
@@ -230,8 +188,6 @@ router.delete('/:ticketId/reviews/:reviewId', async (req, res) => {
 });
 
 
-
-// Update a review on a ticket
 router.put('/:ticketId/reviews/:reviewId', async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.ticketId);
@@ -244,7 +200,6 @@ router.put('/:ticketId/reviews/:reviewId', async (req, res) => {
   }
 });
 
-// Assign a ticket to the requesting admin
 router.put('/:ticketId/assign', isAdmin, async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.ticketId);
@@ -265,12 +220,10 @@ router.put('/:ticketId/assign', isAdmin, async (req, res) => {
 
     res.status(200).json(ticketObject);
   } catch (error) {
-    console.error('Error assigning ticket:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-// Get tickets assigned to the logged-in admin
 router.get('/assigned-to-me', isAdmin, async (req, res) => {
   try {
     const adminId = req.user._id;
@@ -294,7 +247,43 @@ router.get('/assigned-to-me', isAdmin, async (req, res) => {
 
     res.status(200).json(transformedTickets);
   } catch (error) {
-    console.error('Error fetching assigned tickets:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+router.get('/stats', isAdmin, async (req, res) => {
+  try {
+    const groupBy = ['day', 'week', 'month'].includes(req.query.groupBy) ? req.query.groupBy : 'day';
+    let groupFormat;
+    let sortOrder = { _id: 1 };
+
+    switch (groupBy) {
+      case 'month':
+        groupFormat = '%Y-%m';
+        break;
+      case 'week':
+        groupFormat = '%Y-%U';
+        break;
+      case 'day':
+      default:
+        groupFormat = '%Y-%m-%d';
+        break;
+    }
+
+    const stats = await Ticket.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: groupFormat, date: '$createdAt', timezone: 'UTC' } }, // Added timezone
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: sortOrder },
+    ]);
+    const labels = stats.map(stat => stat._id);
+    const data = stats.map(stat => stat.count);
+
+    res.status(200).json({ labels, data });
+  } catch (error) {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });

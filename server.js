@@ -1,4 +1,3 @@
-// Dependancies
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -8,10 +7,8 @@ dotenv.config();
 require('./config/database');
 const express = require('express');
 
-// Authentication
 const verifyToken = require('./middleware/verify-token');
 
-// Controllers
 const testJWTRouter = require('./controllers/test-jwt');
 const usersRouter = require('./controllers/users');
 const profilesRouter = require('./controllers/profiles');
@@ -24,11 +21,9 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Routes
 app.use('/test-jwt', testJWTRouter);
 app.use('/users', usersRouter);
 
-// Protected Routes - verifyToken is applied within each router as needed
 app.use('/tickets', ticketsRouter);
 app.use('/profiles', profilesRouter);
 
