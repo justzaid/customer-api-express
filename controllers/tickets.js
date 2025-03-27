@@ -30,8 +30,10 @@ router.get('/my-tickets', async (req, res) => {
       // Admin can view all tickets
       tickets = await Ticket.find({}).populate('customerId').sort({ createdAt: 'desc' });
     } else {
-      // Normal user can only view their own tickets
-      tickets = await Ticket.find({ customerId: userId }).populate('customerId').sort({ createdAt: 'desc' });
+      tickets = await Ticket.find({ customerId: userId })
+        .populate('customerId', 'username email _id')
+        .populate('assignedTo', 'username email _id')
+        .sort({ createdAt: 'desc' });
     }
 
     res.status(200).json(tickets);
@@ -54,9 +56,9 @@ router.get('/all', isAdmin, async (req, res) => {
       .sort({ createdAt: 'desc' });
 
     const transformedTickets = tickets.map(ticket => {
-      const ticketObject = ticket.toObject(); // Convert Mongoose doc to plain object
-      ticketObject.user = ticketObject.customerId; // Alias customerId as user
-      delete ticketObject.customerId; // Remove original customerId field
+      const ticketObject = ticket.toObject();
+      ticketObject.user = ticketObject.customerId;
+      delete ticketObject.customerId;
       return ticketObject;
     });
 
@@ -71,8 +73,17 @@ router.get('/all', isAdmin, async (req, res) => {
 // Get a specific ticket by ID for logged-in user while admin sees all
 router.get('/my-tickets/:ticketId', async (req, res) => {
   try {
-    const userId = req.user._id; // The logged-in user's ID
-    const ticket = await Ticket.findById(req.params.ticketId).populate('customerId').populate('reviews.author');
+    const userId = req.user._id;
+
+    const ticket = await Ticket.findById(req.params.ticketId)
+      .populate('customerId', 'username email _id')
+      .populate('reviews.author', 'username email _id')
+      .populate('assignedTo', 'username email _id');
+
+    // Check if ticket exists
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
 
     // Check if the ticket belongs to the logged-in user or if the user is an admin
     if (ticket.customerId._id.toString() !== userId.toString() && req.user.role !== 'admin') {
@@ -80,11 +91,23 @@ router.get('/my-tickets/:ticketId', async (req, res) => {
     }
 
     // Sort reviews by createdAt
-    ticket.reviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (ticket.reviews) {
+      ticket.reviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
 
-    res.status(200).json(ticket);
+    let ticketObject = ticket.toObject();
+
+    if (!ticketObject.assignedTo) {
+      const managingAdmin = await User.findOne({ role: 'admin' }).select('username email _id');
+      if (managingAdmin) {
+        ticketObject.managingAdmin = managingAdmin.toObject();
+      }
+    }
+
+    res.status(200).json(ticketObject);
   } catch (error) {
-    res.status(500).json(error);
+    console.error('Error fetching ticket by ID:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
@@ -209,6 +232,61 @@ router.put('/:ticketId/reviews/:reviewId', async (req, res) => {
     res.status(200).json({ message: 'Review has been succesfully updated.' });
   } catch (error) {
     res.status(500).json(error);
+  }
+});
+
+// Assign a ticket to the requesting admin
+router.put('/:ticketId/assign', isAdmin, async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    ticket.assignedTo = req.user._id;
+    await ticket.save();
+
+    const populatedTicket = await Ticket.findById(ticket._id)
+      .populate({ path: 'customerId', select: 'username email _id' })
+      .populate({ path: 'assignedTo', select: 'username email _id' });
+
+    const ticketObject = populatedTicket.toObject();
+    ticketObject.user = ticketObject.customerId;
+    delete ticketObject.customerId;
+
+    res.status(200).json(ticketObject);
+  } catch (error) {
+    console.error('Error assigning ticket:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+// Get tickets assigned to the logged-in admin
+router.get('/assigned-to-me', isAdmin, async (req, res) => {
+  try {
+    const adminId = req.user._id;
+    const tickets = await Ticket.find({ assignedTo: adminId })
+      .populate({
+        path: 'customerId',
+        select: 'username email _id',
+      })
+      .populate({
+        path: 'assignedTo',
+        select: 'username email _id',
+      })
+      .sort({ createdAt: 'desc' });
+
+    const transformedTickets = tickets.map(ticket => {
+      const ticketObject = ticket.toObject();
+      ticketObject.user = ticketObject.customerId;
+      delete ticketObject.customerId;
+      return ticketObject;
+    });
+
+    res.status(200).json(transformedTickets);
+  } catch (error) {
+    console.error('Error fetching assigned tickets:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
