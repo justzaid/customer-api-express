@@ -135,27 +135,36 @@ router.post('/', async (req, res) => {
 // Update a ticket
 router.put('/:ticketId', async (req, res) => {
 try {
-    // Find the Ticket:
     const ticket = await Ticket.findById(req.params.ticketId);
 
-    // Check permissions:
-    if (!ticket.customerId.equals(req.user._id)) {
-    return res.status(403).send("You're not allowed to do that!");
+    // Checking if ticket exists
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    
+    if (!ticket.customerId.equals(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).send("You're not allowed to do that!");
     }
 
-    // Update ticket:
-    const updatedTicket = await Ticket.findByIdAndUpdate(
-    req.params.ticketId,
-    req.body,
-    { new: true }
-    );
+    const allowedUpdates = req.body;
 
-    // Append req.user to the author property:
-    updatedTicket._doc.customerId = req.user;
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      req.params.ticketId,
+      allowedUpdates,
+      { new: true }
+    ).populate('customerId', 'username email _id')
+     .populate('assignedTo', 'username email _id')
+     .populate('reviews.author', 'username email _id');
+
+  
+    if (updatedTicket.reviews) {
+      updatedTicket.reviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
 
     // Issue JSON response:
     res.status(200).json(updatedTicket);
 } catch (error) {
+    console.error('Error updating ticket:', error);
     res.status(500).json(error);
 }
 });
