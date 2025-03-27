@@ -53,7 +53,8 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const existingUser = await User.findOne({ email }, { username: 1, hashedPassword: 1, role: 1 });
+    // had to add email to get access in displaying email in front end app
+    const existingUser = await User.findOne({ email }, { username: 1, email: 1, hashedPassword: 1, role: 1 });
 
 
     if (!existingUser) {
